@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from backend.auth.routes import router as auth_router
+from backend.agents.profile import router as profile_router
 
 load_dotenv()
 
@@ -16,6 +17,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(profile_router, prefix="/api/v1/profile", tags=["profile"])
 
 @app.get("/")
 def health():
