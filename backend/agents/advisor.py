@@ -33,7 +33,7 @@ def profile_node(state: AdvisorState) -> AdvisorState:
     return state
 
 def career_path_node(state: AdvisorState) -> AdvisorState:
-    state["response"] = "[CareerPath Agent] — coming soon"
+    state["response"] = "__career_path__"
     return state
 
 def coach_node(state: AdvisorState) -> AdvisorState:
