@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 import { logout } from '../features/auth/authSlice'
 import api from '../api/axios'
 
@@ -8,6 +9,7 @@ export default function Chat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const name = useSelector((state) => state.auth.name)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -51,6 +53,17 @@ export default function Chat() {
     navigate('/login')
   }
 
+  const handleClearHistory = async () => {
+    setClearing(true)
+    try {
+      await api.delete('/chat/history')
+      setMessages([])
+    } catch {
+    } finally {
+      setClearing(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
       <div className="flex justify-between items-center px-6 py-4 border-b border-gray-800">
@@ -60,6 +73,13 @@ export default function Chat() {
         <div className="flex items-center gap-4">
           <span className="text-gray-400 text-sm">{name}</span>
           <Link to="/profile" className="text-indigo-400 text-sm">Profile</Link>
+          <button
+            onClick={handleClearHistory}
+            disabled={clearing || messages.length === 0}
+            className="text-gray-500 text-sm hover:text-red-400 disabled:opacity-30 transition"
+          >
+            {clearing ? 'Clearing...' : 'Clear chat'}
+          </button>
           <button onClick={handleLogout} className="text-gray-500 text-sm hover:text-white">Logout</button>
         </div>
       </div>
@@ -70,10 +90,28 @@ export default function Chat() {
         )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
-              msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-200'
+            <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
+              msg.role === 'user' ? 'bg-indigo-600 text-white whitespace-pre-wrap' : 'bg-gray-800 text-gray-200'
             }`}>
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                    li: ({ children }) => <li className="text-gray-300">{children}</li>,
+                    strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                    h1: ({ children }) => <h1 className="text-base font-bold text-white mb-1">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-sm font-bold text-white mb-1">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-semibold text-indigo-300 mb-1">{children}</h3>,
+                    code: ({ children }) => <code className="bg-gray-700 text-indigo-300 px-1 rounded text-xs">{children}</code>,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}

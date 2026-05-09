@@ -1,12 +1,11 @@
 import axios from 'axios'
-import { store } from '../app/store'
 
 const api = axios.create({
   baseURL: 'http://localhost:8000/api/v1',
 })
 
 api.interceptors.request.use((config) => {
-  const token = store.getState().auth.token
+  const token = localStorage.getItem('clairo_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

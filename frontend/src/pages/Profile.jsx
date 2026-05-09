@@ -15,9 +15,7 @@ export default function Profile() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await api.post('/profile/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const res = await api.post('/profile/upload', formData)
       setProfile(res.data.profile)
     } catch (err) {
       setError(err.response?.data?.detail || 'Upload failed')
