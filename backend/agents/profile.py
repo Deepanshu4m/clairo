@@ -7,6 +7,24 @@ from backend.agents.profile_agent import parse_resume
 
 router = APIRouter()
 
+@router.get("/")
+def get_profile(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        return {"profile": None}
+    return {
+        "profile": {
+            "full_name": profile.full_name,
+            "summary": profile.summary,
+            "skills": profile.skills,
+            "experience": profile.experience,
+            "education": profile.education,
+        }
+    }
+
 @router.post("/upload")
 async def upload_resume(
     file: UploadFile = File(...),

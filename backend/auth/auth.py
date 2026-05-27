@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -5,13 +9,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from backend.db.models import get_db, User
-import os
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-
-from dotenv import load_dotenv
-load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect} from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/axios'
 
@@ -7,6 +7,13 @@ export default function Profile() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  useEffect(() => {
+  api.get('/profile/').then((res) => {
+    if (res.data.profile) {
+      setProfile(res.data.profile)
+    }
+  }).catch(() => {})
+}, [])
 
   const handleUpload = async () => {
     if (!file) return
