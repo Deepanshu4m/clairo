@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage
 from sqlalchemy.orm import Session
 from backend.db.models import UserProfile
 from backend.rag.retriever import get_career_context
+from backend.agents.jobs import fetch_jobs
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent / ".env")
 
@@ -31,14 +32,18 @@ Based on the user's profile and the career knowledge above, provide a detailed, 
 4. Concrete action steps (courses, projects, certifications)
 5. Potential challenges and how to overcome them
 
+At the end, on a new line, write exactly:
+RECOMMENDED_ROLE: <just the job title, e.g. "Solutions Architect" or "Staff Engineer">
+
 Be specific, actionable, and encouraging.
 """
 
-async def run_career_path_agent(user_id: int, question: str, db: Session) -> str:
+async def run_career_path_agent(user_id: int, question: str, db: Session) -> dict:
+
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
 
     if not profile:
-        return "Please upload your resume first so I can give you a personalized career roadmap."
+        return {"response": "Please upload your resume first so I can give you a personalized career roadmap.", "jobs": []}
 
     query = f"{question} {' '.join(profile.skills or [])} {' '.join([e.get('role','') for e in (profile.experience or [])])}"
     context = get_career_context(query)
@@ -60,4 +65,16 @@ async def run_career_path_agent(user_id: int, question: str, db: Session) -> str
     )
 
     response = await llm.ainvoke([HumanMessage(content=prompt)])
-    return response.content
+    response_text = response.content
+
+    recommended_role = None
+    for line in response_text.split("\n"):
+        if line.startswith("RECOMMENDED_ROLE:"):
+            recommended_role = line.replace("RECOMMENDED_ROLE:", "").strip()
+            response_text = response_text.replace(line, "").strip()
+            break
+
+    search_query = recommended_role or (profile.skills[0] if profile.skills else question)
+    jobs = await fetch_jobs(search_query)
+
+    return {"response": response_text, "jobs": jobs}

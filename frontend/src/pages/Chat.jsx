@@ -10,6 +10,11 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [jobs, setJobs] = useState([])
+  // What: jobs state stores the latest job listings from career_path responses
+  // Why: we need to persist jobs between renders and show them below the chat
+  // Effect: job cards appear/disappear based on what the last intent was
+
   const name = useSelector((state) => state.auth.name)
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -34,6 +39,14 @@ export default function Chat() {
     try {
       const res = await api.post('/chat/', { message: userMsg.content })
       setMessages((prev) => [...prev, { role: 'assistant', content: res.data.response }])
+      // What: check if backend returned jobs in the response
+      // Why: jobs only come back on career_path intent, empty array otherwise
+      // Effect: job cards show after career advice, disappear after coach/interview responses
+      if (res.data.jobs && res.data.jobs.length > 0) {
+        setJobs(res.data.jobs)
+      } else {
+        setJobs([])
+      }
     } catch {
       setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Try again.' }])
     } finally {
@@ -58,6 +71,7 @@ export default function Chat() {
     try {
       await api.delete('/chat/history')
       setMessages([])
+      setJobs([])
     } catch {
     } finally {
       setClearing(false)
@@ -115,11 +129,44 @@ export default function Chat() {
             </div>
           </div>
         ))}
+
         {loading && (
           <div className="flex justify-start">
             <div className="bg-gray-800 text-gray-400 px-4 py-3 rounded-2xl text-sm">Thinking...</div>
           </div>
         )}
+
+        {/* Job cards — only show after a career_path response */}
+        {jobs.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-gray-500 uppercase tracking-wide px-1">Live Jobs Matching Your Path</p>
+            {jobs.map((job, i) => (
+              <div key={i} className="bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 space-y-1">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-white text-sm font-semibold">{job.title}</p>
+                    <p className="text-gray-400 text-xs">{job.company} · {job.location}</p>
+                  </div>
+                  <span className="text-xs text-indigo-400 bg-indigo-900 px-2 py-1 rounded-full whitespace-nowrap">
+                    {job.employment_type}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1">
+                  <p className="text-gray-600 text-xs">Posted: {job.posted}</p>
+                  <a
+                    href={job.apply_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+                  >
+                    Apply →
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 

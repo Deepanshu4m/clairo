@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from backend.db.models import get_db, ChatHistory
@@ -22,11 +22,6 @@ async def chat(
     db.add(ChatHistory(user_id=current_user.id, role="user", content=req.message))
     db.commit()
 
-    # Bug 6 fix — only load last 20 messages instead of entire history
-    # What: queries last 20 rows ordered by newest first, then reverses to get oldest-first order
-    # Why: loading 500 old messages on every request wastes memory and will eventually
-    #      hit Gemini's context window limit. 20 messages is enough for intent detection
-    # Effect: faster responses, no context overflow as conversation grows
     history = (
         db.query(ChatHistory)
         .filter(ChatHistory.user_id == current_user.id)
@@ -47,8 +42,11 @@ async def chat(
     intent = result["intent"]
     response = result["response"]
 
+    jobs = []
     if intent == "career_path":
-        response = await run_career_path_agent(current_user.id, req.message, db)
+        result_data = await run_career_path_agent(current_user.id, req.message, db)
+        response = result_data["response"]
+        jobs = result_data["jobs"]
     elif intent == "coach":
         response = await run_coach_agent(current_user.id, req.message, db)
     elif intent == "mock_interview":
@@ -57,7 +55,7 @@ async def chat(
     db.add(ChatHistory(user_id=current_user.id, role="assistant", content=response))
     db.commit()
 
-    return {"response": response, "intent": intent}
+    return {"response": response, "intent": intent, "jobs": jobs}
 
 @router.get("/history")
 def get_history(
